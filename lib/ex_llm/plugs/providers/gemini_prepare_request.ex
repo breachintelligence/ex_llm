@@ -79,12 +79,18 @@ defmodule ExLLM.Plugs.Providers.GeminiPrepareRequest do
   defp normalize_role("user"), do: "user"
   defp normalize_role("assistant"), do: "model"
   defp normalize_role("model"), do: "model"
+  defp normalize_role("tool"), do: "function"
+
   # System handled separately
   defp normalize_role("system"), do: "user"
   defp normalize_role(_), do: "user"
 
   defp format_parts(content) when is_binary(content) do
     [%{"text" => content}]
+  end
+
+  defp format_parts(%{"functionResponse" => _} = content) do
+    [content]
   end
 
   defp format_parts(content) when is_list(content) do
