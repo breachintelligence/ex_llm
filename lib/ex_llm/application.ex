@@ -20,16 +20,12 @@ defmodule ExLLM.Application do
     # Initialize circuit breaker ETS table
     ExLLM.Infrastructure.CircuitBreaker.init()
 
+    # TODO move to a child instead of sleeping here
     # Delay metrics setup to avoid telemetry warnings
-    if Mix.env() in [:dev, :test] do
-      spawn(fn ->
-        Process.sleep(100)
-        ExLLM.Infrastructure.CircuitBreaker.Metrics.setup()
-      end)
-    else
-      # In production, set up immediately
+    spawn(fn ->
+      Process.sleep(100)
       ExLLM.Infrastructure.CircuitBreaker.Metrics.setup()
-    end
+    end)
 
     children =
       [
