@@ -7,6 +7,8 @@ config :tesla, disable_deprecated_builder_warning: true
 config :ex_llm,
   # Environment configuration (set at compile time)
   environment: Mix.env(),
+  # Models configuration directory
+  models_config_directory: "./config/models",
   # Caching strategy
   cache_strategy: ExLLM.Cache.Strategies.Production,
   # Global cache configuration

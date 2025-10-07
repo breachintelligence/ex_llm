@@ -35,7 +35,7 @@ defmodule ExLLM.Infrastructure.Config.ModelConfig do
     # Pricing fields
     "input" => :input,
     "output" => :output,
-    # Capability fields  
+    # Capability fields
     "vision" => :vision,
     "function_calling" => :function_calling,
     "streaming" => :streaming,
@@ -51,9 +51,30 @@ defmodule ExLLM.Infrastructure.Config.ModelConfig do
   Gets the path to the model configuration directory.
 
   This function handles locating the configuration directory in both development
-  and dependency scenarios.
+  and dependency scenarios. It first checks for an explicit configuration,
+  then falls back to automatic discovery.
   """
   def config_dir do
+    # Strategy 1: Check application configuration first
+    case Application.get_env(:ex_llm, :models_config_directory) do
+      nil ->
+        # Fall back to automatic discovery
+        discover_config_dir()
+
+      configured_path ->
+        expanded_path = Path.expand(configured_path)
+
+        if File.exists?(expanded_path) do
+          expanded_path
+        else
+          # Configuration exists but directory doesn't, fall back to discovery
+          discover_config_dir()
+        end
+    end
+  end
+
+  # Automatic discovery of config directory (original logic)
+  defp discover_config_dir do
     # Strategy 1: Try current working directory
     cwd_path = Path.expand("config/models")
 
@@ -83,6 +104,25 @@ defmodule ExLLM.Infrastructure.Config.ModelConfig do
       current_dir == "/" -> nil
       true -> find_project_config_dir(Path.dirname(current_dir))
     end
+  end
+
+  @doc """
+  Sets the models configuration directory at runtime.
+
+  This allows you to override the compile-time configuration.
+
+  ## Examples
+
+      iex> ExLLM.Infrastructure.Config.ModelConfig.set_config_dir("/path/to/models")
+      :ok
+
+      iex> ExLLM.Infrastructure.Config.ModelConfig.config_dir()
+      "/path/to/models"
+  """
+  def set_config_dir(path) when is_binary(path) do
+    Application.put_env(:ex_llm, :models_config_directory, path)
+    # Clear cache to force reload with new directory
+    reload_config()
   end
 
   @providers [
@@ -117,7 +157,7 @@ defmodule ExLLM.Infrastructure.Config.ModelConfig do
 
       iex> ExLLM.Infrastructure.Config.ModelConfig.get_pricing(:anthropic, "claude-3-5-sonnet-20241022")
       %{input: 3.00, output: 15.00}
-      
+
       iex> ExLLM.Infrastructure.Config.ModelConfig.get_pricing(:ollama, "any-model")
       %{input: 0.0, output: 0.0}
 
@@ -151,7 +191,7 @@ defmodule ExLLM.Infrastructure.Config.ModelConfig do
 
       iex> ExLLM.Infrastructure.Config.ModelConfig.get_context_window(:anthropic, "claude-3-5-sonnet-20241022")
       200000
-      
+
       iex> ExLLM.Infrastructure.Config.ModelConfig.get_context_window(:ollama, "unknown-model")
       4096
   """
@@ -183,7 +223,7 @@ defmodule ExLLM.Infrastructure.Config.ModelConfig do
 
       iex> ExLLM.Infrastructure.Config.ModelConfig.get_capabilities(:openai, "gpt-4o")
       [:text, :vision, :function_calling, :streaming]
-      
+
       iex> ExLLM.Infrastructure.Config.ModelConfig.get_capabilities(:ollama, "unknown-model")
       [:chat, :streaming]
   """
@@ -215,7 +255,7 @@ defmodule ExLLM.Infrastructure.Config.ModelConfig do
 
       iex> ExLLM.Infrastructure.Config.ModelConfig.get_max_output_tokens(:openai, "gpt-4o")
       16384
-      
+
       iex> ExLLM.Infrastructure.Config.ModelConfig.get_max_output_tokens(:ollama, "unknown-model")
       4096
   """
